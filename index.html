@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniSZA Strategic Command Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 850: '#1e293b', 950: '#0f172a', 955: '#0b0f19' }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-955 text-slate-100 min-h-screen pb-16 antialiased">
+
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 border border-amber-500/30 px-5 py-3.5 rounded-xl flex items-center gap-3 shadow-2xl hidden transition-all duration-300">
+    <div class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></div>
+    <span id="toast-text" class="text-xs font-semibold text-slate-200">Sila tunggu...</span>
+  </div>
+
+  <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3 text-amber-500">
+        <i class="fa-solid fa-circle-exclamation text-2xl"></i>
+        <h4 class="text-sm font-bold text-white uppercase tracking-wider" id="modal-title">Perhatian</h4>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed" id="modal-desc">Sila sahkan tindakan anda.</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="modal-cancel-btn" class="px-4 py-1.5 bg-slate-850 hover:bg-slate-800 text-xs rounded-lg font-bold transition">Batal</button>
+        <button id="modal-confirm-btn" class="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-xs rounded-lg font-bold text-white transition">Sahkan</button>
+      </div>
+    </div>
+  </div>
+
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
+        <i class="fa-solid fa-landmark text-xl"></i>
+      </div>
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="font-bold tracking-tight text-white text-lg">UniSZA Strategic Command Portal</span>
+          <span id="connection-badge" class="text-[9px] bg-slate-800 text-slate-400 border border-slate-700 font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span> Memuatkan...
+          </span>
+          <span id="user-email-badge" class="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/25 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 hidden">
+            <i class="fa-solid fa-user-shield text-[9px]"></i> <span id="user-active-email">Sesi Selamat</span>
+          </span>
+        </div>
+        <p class="text-xs text-slate-400">Integrated Web Portal: GAVP (30%) • RICER (20%) • EREP (15%) • SIRNI (10%) • SP1 • SP2 • SP3</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button onclick="openAddFormWithContext()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-emerald-600/15">
+        <i class="fa-solid fa-plus-circle"></i> Tambah Inisiatif
+      </button>
+      <button onclick="exportToCSV()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg font-semibold text-xs transition flex items-center gap-2">
+        <i class="fa-solid fa-download"></i> Eksport CSV
+      </button>
+      <button onclick="resetData()" class="p-2 bg-slate-800 hover:bg-red-950 hover:text-red-300 border border-slate-700 rounded-lg transition" title="Reset Local">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+    <div id="main-loader" class="py-24 text-center space-y-4">
+      <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <p class="text-slate-400 text-sm font-semibold">Mengesahkan sesi selamat Google Workspace UniSZA...</p>
+    </div>
+
+    <div id="dashboard-content" class="space-y-8 hidden">
+      <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3" id="scorecards-container"></section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4 p-6 rounded-xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 space-y-4">
+          <h2 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-circle-info text-amber-500"></i> Objektif Khas UniSZA</h2>
+          <p class="text-xs text-slate-400">Pangkalan data berpusat dipautkan secara asli dengan helaian Google Sheets organisasi.</p>
+          <div class="space-y-2 text-xs" id="quick-info-pillar">
+            <div class="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/10"><p class="font-bold text-amber-400">GAVP (30%)</p><p class="text-slate-400 text-[11px]">Academic Reputation & Branding Global.</p></div>
+            <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10"><p class="font-bold text-blue-400">RICER (20%)</p><p class="text-slate-400 text-[11px]">Citations & Kelompok Jurnal Scopus Q1/Q2.</p></div>
+            <div class="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10"><p class="font-bold text-emerald-400">EREP (15%)</p><p class="text-slate-400 text-[11px]">Employer Reputation & Kebolehpasaran Graduan.</p></div>
+          </div>
+          <div class="pt-2">
+            <span class="text-xs text-slate-400 block font-medium mb-1">Kemajuan KPI Terkumpul Dashboard</span>
+            <div class="flex items-center gap-3">
+              <div class="flex-1 bg-slate-800 rounded-full h-2"><div id="global-progress-bar" class="bg-gradient-to-r from-amber-500 to-emerald-500 h-2 rounded-full" style="width: 0%"></div></div>
+              <span id="global-progress-text" class="text-xs font-bold text-slate-300">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-8 p-6 rounded-xl bg-slate-900 border border-slate-800 flex flex-col justify-between space-y-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-base font-bold text-white">Prestasi Semasa Mengikut Program Strategik</h2>
+            <span class="text-xs text-amber-400 font-semibold">% Pencapaian</span>
+          </div>
+          <div class="w-full h-44 flex items-end justify-around gap-4 pt-4 border-b border-slate-800" id="bars-container"></div>
+          <div class="flex justify-center gap-6 text-xs text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-slate-800 rounded-sm"></span> Sasaran</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-amber-500 rounded-sm"></span> Pencapaian</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="add-form-container" class="p-6 rounded-xl bg-slate-900 border border-amber-500/40 relative hidden">
+        <button onclick="toggleAddForm()" class="absolute top-4 right-4 p-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="text-base font-bold text-white mb-4">Tambah Inisiatif Baru</h3>
+        <form id="add-initiative-form" onsubmit="submitNewInitiative(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div><label class="block text-xs text-slate-400 font-semibold mb-1">Nama Tindakan / Program</label><input type="text" id="new-program" required class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"></div>
+          <div><label class="block text-xs text-slate-400 font-semibold mb-1">Huraian Objektif Kerja</label><input type="text" id="new-objective" required class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"></div>
+          <div><label class="block text-xs text-slate-400 font-semibold mb-1">Quarter Sasaran</label><select id="new-quarter" class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
+          <div class="lg:col-span-2"><label class="block text-xs text-slate-400 font-semibold mb-1">Indikator KPI</label><input type="text" id="new-kpi" required class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"></div>
+          <div><label class="block text-xs text-slate-400 font-semibold mb-1">Kategori Program Utama</label><select id="new-category" class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"><option value="GAVP">GAVP</option><option value="RICER">RICER</option><option value="EREP">EREP</option><option value="SIRNI">SIRNI</option><option value="SP1">SP1</option><option value="SP2">SP2</option><option value="SP3">SP3</option></select></div>
+          <div class="flex gap-4">
+            <div class="flex-1"><label class="block text-xs text-slate-400 font-semibold mb-1">Sasaran (Target Unit)</label><input type="number" id="new-target" min="1" value="10" required class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"></div>
+            <div class="flex-1"><label class="block text-xs text-slate-400 font-semibold mb-1">Pencapaian Semasa</label><input type="number" id="new-current" min="0" value="0" required class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"></div>
+          </div>
+          <div><label class="block text-xs text-slate-400 font-semibold mb-1">Status Operasi</label><select id="new-status" class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option></select></div>
+          <div><label class="block text-xs text-slate-400 font-semibold mb-1">Ikon Grafik</label><select id="new-icon" class="w-full bg-slate-955 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"><option value="Globe">Globe</option><option value="Users">Users</option><option value="Award">Award</option><option value="BookOpen">BookOpen</option><option value="Activity">Activity</option><option value="Landmark">Landmark</option></select></div>
+          <div class="lg:col-span-3 flex justify-end gap-2 pt-4 border-t border-slate-800"><button type="button" onclick="toggleAddForm()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs">Batal</button><button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-semibold text-white">Simpan</button></div>
+        </form>
+      </section>
+
+      <div class="space-y-4">
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <div class="relative w-full md:w-80">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+              <input type="text" id="search-input" oninput="handleSearchFilter()" placeholder="Cari program, kpi atau objektif..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-amber-500">
+            </div>
+            <button onclick="openAddFormWithContext()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow whitespace-nowrap"><i class="fa-solid fa-circle-plus"></i> (+) Tambah Aktiviti</button>
+          </div>
+          <div class="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1" id="quarter-pills-container"></div>
+        </div>
+        <div class="flex gap-1.5 border-b border-slate-800 overflow-x-auto pb-2" id="category-tabs-container"></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[950px]">
+            <thead>
+              <tr class="bg-slate-850/40 border-b border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-300">
+                <th class="py-4 px-4 text-center w-12">No</th>
+                <th class="py-4 px-4 w-52">Inisiatif Strategik</th>
+                <th class="py-4 px-6">Huraian Objektif Kerja</th>
+                <th class="py-4 px-4 text-center w-20">Suku</th>
+                <th class="py-4 px-6 w-52">Indikator KPI</th>
+                <th class="py-4 px-4 w-40 text-center">Kemajuan Unit</th>
+                <th class="py-4 px-4 text-center w-32">Status</th>
+                <th class="py-4 px-4 text-center w-28">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody id="table-body" class="divide-y divide-slate-800 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-[11px] text-slate-500 text-center pt-12 space-y-1">
+    <p>© 2026 Bahagian Perancangan Strategik UniSZA. Hak Cipta Terpelihara.</p>
+    <p class="text-slate-400 font-medium"><span class="w-1.5 h-1.5 inline-block rounded-full bg-amber-400 animate-pulse mr-1"></span> Hubungan Bersepadu Pintar Google Workspace.</p>
+  </footer>
+
+  <script>
+    let initiatives = [];
+    let currentFilterCategory = "All";
+    let currentFilterQuarter = "All";
+    let editingId = null;
+    let fallbackToOffline = false;
+
+    const colorClasses = {
+      amber: { border: 'hover:border-amber-500/30', text: 'text-amber-400', bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20', barBg: 'bg-amber-500' },
+      blue: { border: 'hover:border-blue-500/30', text: 'text-blue-400', bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20', barBg: 'bg-blue-500' },
+      emerald: { border: 'hover:border-emerald-500/30', text: 'text-emerald-400', bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', barBg: 'bg-emerald-500' },
+      purple: { border: 'hover:border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20', barBg: 'bg-purple-500' },
+      rose: { border: 'hover:border-rose-500/30', text: 'text-rose-400', bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', barBg: 'bg-rose-500' },
+      teal: { border: 'hover:border-teal-500/30', text: 'text-teal-400', bg: 'bg-teal-500/10 text-teal-400 border-teal-500/20', barBg: 'bg-teal-500' },
+      indigo: { border: 'hover:border-indigo-500/30', text: 'text-indigo-400', bg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20', barBg: 'bg-indigo-500' }
+    };
+
+    function showToast(message, isPersistent = false) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-text").textContent = message;
+      toast.classList.remove("hidden");
+      if (!isPersistent) { setTimeout(() => { toast.classList.add("hidden"); }, 2500); }
+    }
+
+    function showCustomModal(title, desc, onConfirm) {
+      const modal = document.getElementById("custom-modal");
+      document.getElementById("modal-title").textContent = title;
+      document.getElementById("modal-desc").textContent = desc;
+      modal.classList.remove("hidden");
+      const confirmBtn = document.getElementById("modal-confirm-btn");
+      const cancelBtn = document.getElementById("modal-cancel-btn");
+      const cleanUp = () => { modal.classList.add("hidden"); confirmBtn.onclick = null; cancelBtn.onclick = null; };
+      confirmBtn.onclick = () => { onConfirm(); cleanUp(); };
+      cancelBtn.onclick = () => { cleanUp(); };
+    }
+
+    function fetchInitiatives() {
+      setConnectionBadge("connecting", "Menyambung...");
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.success && result.data) {
+              initiatives = result.data.map(item => ({
+                id: Number(item.id), program: item.program || "", objective: item.objective || "",
+                quarter: item.quarter || "Q1", kpi: item.kpi || "", target: Number(item.target) || 0,
+                current: Number(item.current) || 0, status: item.status || "Not Started",
+                category: item.category || "GAVP", weight: item.weight || "", icon: item.icon || "Layers"
+              }));
+              setConnectionBadge("connected", "Akaun UniSZA Aktif");
+              if (result.userEmail) {
+                document.getElementById("user-active-email").textContent = result.userEmail;
+                document.getElementById("user-email-badge").classList.remove("hidden");
+              }
+            } else { handleLoadError(result.error); }
+            completeLoading();
+          })
+          .withFailureHandler(function(err) { handleLoadError(err.toString()); completeLoading(); })
+          .getInitiatives();
+      } else {
+        fallbackToOffline = true;
+        setConnectionBadge("offline", "Mod Luar Talian (Offline)");
+        initiatives = JSON.parse(localStorage.getItem("offline_data")) || getBackupData();
+        completeLoading();
+      }
+    }
+
+    function handleLoadError(e) {
+      fallbackToOffline = true;
+      setConnectionBadge("offline", "Ralat Awan");
+      initiatives = JSON.parse(localStorage.getItem("offline_data")) || getBackupData();
+    }
+
+    function completeLoading() {
+      document.getElementById("main-loader").classList.add("hidden");
+      document.getElementById("dashboard-content").classList.remove("hidden");
+      renderDashboard();
+    }
+
+    function setConnectionBadge(status, text) {
+      const badge = document.getElementById("connection-badge");
+      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-400' : status === 'offline' ? 'bg-red-400' : 'bg-slate-400 animate-pulse'}"></span> ${text}`;
+      badge.className = `text-[9px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 ${
+        status === 'connected' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+        status === 'offline' ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
+      }`;
+    }
+
+    function submitNewInitiative(e) {
+      e.preventDefault();
+      const program = document.getElementById("new-program").value;
+      const objective = document.getElementById("new-objective").value;
+      const quarter = document.getElementById("new-quarter").value;
+      const kpi = document.getElementById("new-kpi").value;
+      const category = document.getElementById("new-category").value;
+      const target = Number(document.getElementById("new-target").value);
+      const current = Number(document.getElementById("new-current").value);
+      const status = document.getElementById("new-status").value;
+      const icon = document.getElementById("new-icon").value;
+      const weight = getWeightByCategory(category);
+
+      const newItem = { program, objective, quarter, kpi, category, target, current, status, icon, weight };
+      showToast("Mendaftar inisiatif...", true);
+
+      if (!fallbackToOffline && typeof google !== 'undefined') {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res.success) { toggleAddForm(); document.getElementById("add-initiative-form").reset(); showToast("Berjaya disimpan!"); fetchInitiatives(); }
+            else { showToast("Gagal: " + res.error); }
+          })
+          .createInitiative(newItem);
+      } else {
+        newItem.id = initiatives.length > 0 ? Math.max(...initiatives.map(i => i.id)) + 1 : 1;
+        initiatives.push(newItem); saveLocalData(); toggleAddForm(); document.getElementById("add-initiative-form").reset();
+        showToast("Disimpan secara tempatan!"); renderDashboard();
+      }
+    }
+
+    function saveEditRow(id) {
+      const row = initiatives.find(i => i.id === id);
+      if (!row) return;
+      const updatedItem = {
+        id, program: document.getElementById(`edit-program-${id}`).value,
+        objective: document.getElementById(`edit-objective-${id}`).value,
+        quarter: document.getElementById(`edit-quarter-${id}`).value,
+        kpi: document.getElementById(`edit-kpi-${id}`).value,
+        target: Number(document.getElementById(`edit-target-${id}`).value),
+        current: Number(document.getElementById(`edit-current-${id}`).value),
+        status: document.getElementById(`edit-status-${id}`).value,
+        category: row.category, weight: row.weight, icon: row.icon
+      };
+      showToast("Mengemaskini pangkalan data...", true);
+      if (!fallbackToOffline && typeof google !== 'undefined') {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res.success) { initiatives = initiatives.map(i => i.id === id ? updatedItem : i); editingId = null; showToast("Berjaya!"); renderDashboard(); }
+            else { showToast("Gagal: " + res.error); }
+          })
+          .updateInitiative(updatedItem);
+      } else {
+        initiatives = initiatives.map(i => i.id === id ? updatedItem : i); editingId = null; saveLocalData();
+        showToast("Kemaskini lokal disimpan!"); renderDashboard();
+      }
+    }
+
+    function deleteRow(id) {
+      showCustomModal("Padam Rekod", "Pasti ingin memadam rekod strategik ini? Tindakan akan direkodkan dalam log audit.", function() {
+        showToast("Memadam...", true);
+        if (!fallbackToOffline && typeof google !== 'undefined') {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              if (res.success) { initiatives = initiatives.filter(i => i.id !== id); showToast("Berjaya dipadam!"); renderDashboard(); }
+              else { showToast("Gagal: " + res.error); }
+            })
+            .deleteInitiative(id);
+        } else {
+          initiatives = initiatives.filter(i => i.id !== id); saveLocalData(); showToast("Dipadam secara tempatan!"); renderDashboard();
+        }
+      });
+    }
+
+    function stepProgress(id, inc) {
+      const item = initiatives.find(i => i.id === id);
+      if (!item) return;
+      const nextVal = Math.max(0, Math.min(item.target, item.current + inc));
+      let nextStatus = nextVal === item.target ? 'Completed' : (nextVal > 0 ? 'In Progress' : 'Not Started');
+      const updated = { ...item, current: nextVal, status: nextStatus };
+      initiatives = initiatives.map(i => i.id === id ? updated : i);
+      saveLocalData(); renderDashboard();
+      if (!fallbackToOffline && typeof google !== 'undefined') { google.script.run.updateInitiative(updated); }
+    }
+
+    function saveLocalData() { localStorage.setItem("offline_data", JSON.stringify(initiatives)); }
+    function toggleAddForm() { document.getElementById("add-form-container").classList.toggle("hidden"); }
+    
+    function openAddFormWithContext() {
+      document.getElementById("add-form-container").classList.remove("hidden");
+      document.getElementById("new-category").value = currentFilterCategory !== "All" ? currentFilterCategory : "GAVP";
+      document.getElementById("new-program").focus();
+    }
+    
+    function openAddFormWithContextCategory(cat) {
+      document.getElementById("add-form-container").classList.remove("hidden");
+      document.getElementById("new-category").value = cat;
+      document.getElementById("new-program").focus();
+    }
+
+    function getWeightByCategory(c) {
+      if (c === 'GAVP') return '30% Academic Reputation';
+      if (c === 'RICER') return '20% Citations per Faculty';
+      if (c === 'EREP') return '15% Employer Reputation';
+      if (c === 'SIRNI') return '10% Int. Research Network';
+      return 'Future Ready Curriculum';
+    }
+
+    function renderDashboard() { renderScorecards(); renderSVGChart(); renderFilters(); renderTable(); }
+
+    function renderScorecards() {
+      const container = document.getElementById("scorecards-container");
+      const pList = [
+        { name: 'GAVP', text: 'Academic Reputation', weight: '30%', color: 'amber', targetLabel: '5k Hubunan' },
+        { name: 'RICER', text: 'Citations / Faculty', weight: '20%', color: 'blue', targetLabel: '9k Sitasi' },
+        { name: 'EREP', text: 'Employer Reputation', weight: '15%', color: 'emerald', targetLabel: '50 Majikan' },
+        { name: 'SIRNI', text: 'Int. Research Net', weight: '10%', color: 'purple', targetLabel: '100 Rakan' },
+        { name: 'SP1', text: 'Future Curriculum', weight: 'Pillar', color: 'rose', targetLabel: 'Attachment' },
+        { name: 'SP2', text: 'Sustainable Learning', weight: 'Pillar', color: 'teal', targetLabel: 'AI/VR Classroom' },
+        { name: 'SP3', text: 'Flexible System', weight: 'Pillar', color: 'indigo', targetLabel: 'Daurah/Tahfiz' }
+      ];
+
+      let html = "", globalTgt = 0, globalCur = 0;
+      pList.forEach(p => {
+        const items = initiatives.filter(i => i.category === p.name);
+        const completed = items.filter(i => i.status === 'Completed').length;
+        let targetSum = 0, currentSum = 0;
+        items.forEach(i => { targetSum += i.target; currentSum += i.current; });
+        globalTgt += targetSum; globalCur += currentSum;
+        const pct = targetSum > 0 ? Math.round((currentSum / targetSum) * 100) : 0;
+        const classes = colorClasses[p.color] || colorClasses.amber;
+
+        html += `
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 ${classes.border} transition flex flex-col justify-between relative">
+            <div class="flex justify-between items-start">
+              <span class="text-[9px] font-bold ${classes.text} uppercase tracking-widest">${p.name}</span>
+              <div class="flex items-center gap-1">
+                <span class="text-[8px] bg-slate-850 text-slate-400 px-1 py-0.5 rounded font-extrabold">${p.weight}</span>
+                <button onclick="openAddFormWithContextCategory('${p.name}')" class="text-slate-500 hover:${classes.text}"><i class="fa-solid fa-circle-plus text-xs"></i></button>
+              </div>
+            </div>
+            <div class="my-2">
+              <p class="text-[10px] text-slate-400 font-semibold truncate">${p.text}</p>
+              <p class="text-sm font-extrabold text-slate-200 mt-0.5">${completed}/${items.length} Selesai</p>
+            </div>
+            <div class="space-y-1">
+              <div class="flex justify-between text-[8px] text-slate-500 font-bold"><span>${p.targetLabel}</span><span class="font-extrabold ${classes.text}">${pct}%</span></div>
+              <div class="w-full bg-slate-850 h-1 rounded-full overflow-hidden"><div class="${classes.barBg} h-full" style="width: ${pct}%"></div></div>
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+      const globalPct = globalTgt > 0 ? Math.round((globalCur / globalTgt) * 100) : 0;
+      document.getElementById("global-progress-bar").style.width = `${globalPct}%`;
+      document.getElementById("global-progress-text").textContent = `${globalCur}/${globalTgt} (${globalPct}%)`;
+    }
+
+    function renderSVGChart() {
+      const container = document.getElementById("bars-container");
+      const pList = ['GAVP', 'RICER', 'EREP', 'SIRNI', 'SP1', 'SP2', 'SP3'];
+      const colors = { GAVP: 'bg-amber-500', RICER: 'bg-blue-500', EREP: 'bg-emerald-500', SIRNI: 'bg-purple-500', SP1: 'bg-rose-500', SP2: 'bg-teal-500', SP3: 'bg-indigo-500' };
+      let html = "";
+      pList.forEach(p => {
+        const items = initiatives.filter(i => i.category === p);
+        let tUnits = 0, cUnits = 0;
+        items.forEach(i => { tUnits += i.target; cUnits += i.current; });
+        const pct = tUnits > 0 ? Math.round((cUnits / tUnits) * 100) : 0;
+        html += `
+          <div class="flex-1 flex flex-col items-center h-full max-w-[90px]">
+            <div class="w-full flex justify-center gap-1 items-end h-full relative">
+              <div class="w-2.5 bg-slate-800 rounded-t-sm" style="height: 85%"></div>
+              <div class="w-2.5 ${colors[p]} rounded-t-sm transition-all duration-300" style="height: ${Math.max(5, Math.min(85, (cUnits / tUnits) * 85))}%"></div>
+            </div>
+            <span class="text-xs text-slate-400 font-bold tracking-wider mt-2">${p}</span>
+            <span class="text-[10px] text-slate-500 font-bold">${pct}%</span>
+          </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function renderFilters() {
+      const allQuarters = initiatives.map(item => item.quarter);
+      const uniqueQuarters = ['All', ...new Set(allQuarters)].sort();
+      document.getElementById("quarter-pills-container").innerHTML = `<span class="text-xs text-slate-400 font-bold uppercase"><i class="fa-solid fa-filter text-amber-500"></i> Suku:</span>` +
+        uniqueQuarters.map(q => `<button onclick="setQuarterFilter('${q}')" class="px-2.5 py-0.5 rounded-full text-xs font-bold ${currentFilterQuarter === q ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-300 border border-slate-800'}">${q}</button>`).join("");
+
+      const cats = ['All', 'GAVP', 'RICER', 'EREP', 'SIRNI', 'SP1', 'SP2', 'SP3'];
+      const borderColors = { All: 'border-slate-700 text-slate-100', GAVP: 'border-amber-500/40 text-amber-400 bg-amber-500/5', RICER: 'border-blue-500/40 text-blue-400 bg-blue-500/5', EREP: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5', SIRNI: 'border-purple-500/40 text-purple-400 bg-purple-500/5', SP1: 'border-rose-500/40 text-rose-400 bg-rose-500/5', SP2: 'border-teal-500/40 text-teal-400 bg-teal-500/5', SP3: 'border-indigo-500/40 text-indigo-400 bg-indigo-500/5' };
+      document.getElementById("category-tabs-container").innerHTML = cats.map(cat => `<button onclick="setCategoryFilter('${cat}')" class="px-3 py-1.5 text-xs font-bold whitespace-nowrap border rounded-lg transition ${currentFilterCategory === cat ? `${borderColors[cat]} border-current shadow` : 'border-slate-800 text-slate-400 bg-slate-900/40'}\">${cat === 'All' ? '📑 Papar Semua' : 'Program ' + cat}</button>`).join("");
+    }
+
+    function setQuarterFilter(q) { currentFilterQuarter = q; renderDashboard(); }
+    function setCategoryFilter(c) { currentFilterCategory = c; renderDashboard(); }
+    function handleSearchFilter() { renderTable(); }
+
+    function renderTable() {
+      const search = document.getElementById("search-input").value.toLowerCase();
+      const body = document.getElementById("table-body");
+      const filtered = initiatives.filter(item => {
+        const matchesSearch = item.program.toLowerCase().includes(search) || item.objective.toLowerCase().includes(search) || item.kpi.toLowerCase().includes(search);
+        return matchesSearch && (currentFilterCategory === 'All' || item.category === currentFilterCategory) && (currentFilterQuarter === 'All' || item.quarter === currentFilterQuarter);
+      });
+
+      if (filtered.length === 0) {
+        body.innerHTML = `<tr><td colSpan="8" class="py-12 text-center text-slate-500"><i class="fa-solid fa-triangle-exclamation text-2xl mb-2 block text-slate-700"></i>Inisiatif tidak ditemui mengikut kriteria tapis.</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = filtered.map((item, index) => {
+        const isEditing = editingId === item.id;
+        const pct = Math.round((item.current / item.target) * 100);
+        let badgeClass = 'bg-slate-800 text-slate-400 border-slate-700';
+        if (item.category === 'GAVP') badgeClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+        else if (item.category === 'RICER') badgeClass = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+        else if (item.category === 'EREP') badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+        else if (item.category === 'SIRNI') badgeClass = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+        else if (item.category === 'SP1') badgeClass = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+        else if (item.category === 'SP2') badgeClass = 'bg-teal-500/10 text-teal-400 border-teal-500/20';
+        else if (item.category === 'SP3') badgeClass = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+
+        const iconMap = { Globe: 'fa-globe', Users: 'fa-users', Award: 'fa-award', BookOpen: 'fa-book-open', Activity: 'fa-chart-line', Landmark: 'fa-building-columns' };
+        const iconClass = iconMap[item.icon] || 'fa-cubes';
+
+        if (isEditing) {
+          return `
+            <tr class="bg-slate-800/40">
+              <td class="py-3 px-2 text-center text-slate-500">${index + 1}</td>
+              <td class="py-3 px-2"><input type="text" id="edit-program-${item.id}" value="${item.program}" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-white"></td>
+              <td class="py-3 px-2"><textarea id="edit-objective-${item.id}" rows="2" class="w-full bg-slate-955 border border-slate-800 rounded p-1.5 text-xs text-white">${item.objective}</textarea></td>
+              <td class="py-3 px-2 text-center"><select id="edit-quarter-${item.id}" class="bg-slate-955 border border-slate-800 rounded p-1 text-white text-xs"><option value="Q1" ${item.quarter==='Q1'?'selected':''}>Q1</option><option value="Q2" ${item.quarter==='Q2'?'selected':''}>Q2</option><option value="Q3" ${item.quarter==='Q3'?'selected':''}>Q3</option><option value="Q4" ${item.quarter==='Q4'?'selected':''}>Q4</option></select></td>
+              <td class="py-3 px-2"><input type="text" id="edit-kpi-${item.id}" value="${item.kpi}" class="w-full bg-slate-955 border border-slate-800 rounded px-2 py-1 text-xs text-white"></td>
+              <td class="py-3 px-2 text-center"><div class="flex items-center justify-center gap-1"><input type="number" id="edit-current-${item.id}" value="${item.current}" class="w-10 bg-slate-950 text-center border border-slate-800 text-white rounded"> / <input type="number" id="edit-target-${item.id}" value="${item.target}" class="w-10 bg-slate-950 text-center border border-slate-800 text-white rounded"></div></td>
+              <td class="py-3 px-2 text-center"><select id="edit-status-${item.id}" class="bg-slate-955 border border-slate-800 rounded p-1 text-white text-xs"><option value="Not Started" ${item.status==='Not Started'?'selected':''}>Not Started</option><option value="In Progress" ${item.status==='In Progress'?'selected':''}>In Progress</option><option value="Completed" ${item.status==='Completed'?'selected':''}>Completed</option></select></td>
+              <td class="py-3 px-2 text-center"><div class="flex items-center justify-center gap-1.5"><button onclick="saveEditRow(${item.id})" class="p-1 bg-emerald-600 rounded text-white"><i class="fa-solid fa-floppy-disk"></i></button><button onclick="cancelEditRow()" class="p-1 bg-slate-800 rounded text-slate-400"><i class="fa-solid fa-xmark"></i></button></div></td>
+            </tr>`;
+        }
+
+        return `
+          <tr class="transition hover:bg-slate-850/15">
+            <td class="py-4 px-4 text-center font-bold text-slate-600">${index + 1}</td>
+            <td class="py-4 px-4">
+              <div class="space-y-1">
+                <span class="font-bold text-slate-100 block leading-tight">${item.program}</span>
+                <span class="inline-block text-[8px] border px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${badgeClass}">${item.category}</span>
+              </div>
+            </td>
+            <td class="py-4 px-6 text-slate-350">
+              <div class="flex gap-2.5 items-start">
+                <span class="text-slate-500 shrink-0 mt-0.5"><i class="fa-solid ${iconClass}"></i></span>
+                <p class="leading-relaxed">${item.objective}</p>
+              </div>
+            </td>
+            <td class="py-4 px-4 text-center"><span class="px-2 py-0.5 bg-slate-800 border border-slate-700 text-slate-300 rounded font-bold">${item.quarter}</span></td>
+            <td class="py-4 px-4 text-slate-400 font-mono text-[11px]">${item.kpi}</td>
+            <td class="py-4 px-4">
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[11px] text-slate-300 font-bold">
+                  <button onclick="stepProgress(${item.id}, -1)" class="w-4 h-4 bg-slate-800 rounded text-center leading-none font-bold">-</button>
+                  <span>${item.current} / ${item.target}</span>
+                  <button onclick="stepProgress(${item.id}, 1)" class="w-4 h-4 bg-slate-800 rounded text-center leading-none font-bold">+</button>
+                </div>
+                <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden"><div class="h-full ${item.status==='Completed'?'bg-emerald-500':'bg-amber-400'}" style="width: ${Math.min(100, pct)}%"></div></div>
+              </div>
+            </td>
+            <td class="py-4 px-4 text-center">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${item.status==='Completed'?'bg-emerald-500/10 text-emerald-400 border-emerald-500/20':(item.status==='In Progress'?'bg-amber-500/10 text-amber-400 border-amber-500/20':'bg-slate-800 text-slate-400 border-slate-700')}">
+                <span class="w-1 h-1 rounded-full ${item.status==='Completed'?'bg-emerald-400':(item.status==='In Progress'?'bg-amber-400':'bg-slate-400')}"></span>${item.status}
+              </span>
+            </td>
+            <td class="py-4 px-4 text-center">
+              <div class="flex items-center justify-center gap-1"><button onclick="startEditRow(${item.id})" class="p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded hover:text-white"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="deleteRow(${item.id})" class="p-1.5 bg-slate-800 border border-slate-700 text-slate-400 hover:text-red-400 rounded"><i class="fa-solid fa-trash"></i></button></div>
+            </td>
+          </tr>`;
+      }).join("");
+    }
+
+    function startEditRow(id) { editingId = id; renderTable(); }
+    function cancelEditRow() { editingId = null; renderTable(); }
+
+    function resetData() {
+      showCustomModal("Set Semula", "Ingin set semula paparan data grafik lokal?", () => {
+        initiatives = getBackupData(); saveLocalData(); showToast("Data diset semula!"); renderDashboard();
+      });
+    }
+
+    function exportToCSV() {
+      const headers = "Targeted Program,Objective,Quarter,KPI,Target,Current,Status,Category,Strategic Weight\n";
+      const rows = initiatives.map(i => `"${i.program}","${i.objective}","${i.quarter}","${i.kpi}",${i.target},${i.current},"${i.status}","${i.category}","${i.weight}"`).join("\n");
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' }));
+      link.download = "UniSZA_QS_Command_Data.csv"; link.click();
+    }
+
+    function getBackupData() {
+      return [
+        { id: 1, program: "GAVP - Global Speaker Series (1.1)", objective: "Menganjurkan webinar antarabangsa di peringkat fakulti untuk mempromosikan visibiliti UniSZA", quarter: "Q1", kpi: "Jumlah Webinar Antarabangsa yang Berjaya Dianjurkan", target: 50, current: 24, status: "In Progress", category: "GAVP", weight: "30% Academic Reputation", icon: "Globe" },
+        { id: 2, program: "GAVP - Global Speaker Series (1.1)", objective: "Menjemput tokoh akademik dan keynote speaker terkemuka dari universiti bertaraf dunia", quarter: "Q2", kpi: "Bilangan Keynote Speaker daripada Universiti Top 500 QS", target: 20, current: 8, status: "In Progress", category: "GAVP", weight: "30% Academic Reputation", icon: "Globe" },
+        { id: 3, program: "GAVP - Visiting Professor Programme (1.2)", objective: "Melantik profesor pelawat antarabangsa dari rantau fokus (Indonesia, Turkiye, Brunei, Thailand, Timur Tengah)", quarter: "Q2", kpi: "Profesor Pelawat (Visiting Professors) Antarabangsa Dilantik", target: 30, current: 14, status: "In Progress", category: "GAVP", weight: "30% Academic Reputation", icon: "Users" },
+        { id: 4, program: "GAVP - Visiting Professor Programme (1.2)", objective: "Melantik pensyarah adjung antarabangsa untuk meningkatkan perkongsian akademik rentas sempadan", quarter: "Q3", kpi: "Adjunct Professors Antarabangsa Dilantik", target: 50, current: 18, status: "In Progress", category: "GAVP", weight: "30% Academic Reputation", icon: "Users" },
+        { id: 5, program: "GAVP - Academic Reputation Database (1.3)", objective: "Membina pangkalan data akademik global UniSZA mengikut pengelasan Top 200/500 QS, ASEAN & OIC", quarter: "Q1", kpi: "Koleksi Kenalan Akademik Antarabangsa dalam Database", target: 5000, current: 1550, status: "In Progress", category: "GAVP", weight: "30% Academic Reputation", icon: "Layers" },
+        { id: 6, program: "GAVP - UniSZA Global Branding (1.4)", objective: "Mempromosikan pencapaian akademik berimpak tinggi (Nature Paper, Scopus Q1, Patent, Grant) secara global", quarter: "Q3", kpi: "Akademik Posting Promosi Global (LinkedIn, ResearchGate, Web)", target: 500, current: 240, status: "In Progress", category: "GAVP", weight: "30% Academic Reputation", icon: "Award" },
+        { id: 7, program: "RICER - Penerbitan Berimpak Tinggi (2.1)", objective: "Meningkatkan bilangan penerbitan dalam jurnal berindeks Scopus & WoS", quarter: "Q1", kpi: "Jumlah Penerbitan Berindeks Scopus/WoS", target: 800, current: 390, status: "In Progress", category: "RICER", weight: "20% Citations per Faculty", icon: "BookOpen" },
+        { id: 8, program: "RICER - Penerbitan Berimpak Tinggi (2.1)", objective: "Memastikan kualiti penerbitan dalam kelompok jurnal Q1 dan Q2", quarter: "Q2", kpi: "Bilangan Penerbitan di dalam Jurnal Q1 (Sasaran Utama)", target: 120, current: 54, status: "In Progress", category: "RICER", weight: "20% Citations per Faculty", icon: "BookOpen" },
+        { id: 9, program: "RICER - Promosi & Visibiliti Penyelidikan (2.3)", objective: "Mengoptimumkan profil penyelidik (ORCID, GS, Scopus) untuk memandu sitasi", quarter: "Q4", kpi: "Jumlah Sitasi Tahunan Komulatif yang Diperoleh", target: 9000, current: 4120, status: "In Progress", category: "RICER", weight: "20% Citations per Faculty", icon: "Activity" },
+        { id: 10, program: "RICER - Pembangunan Kapasiti Penyelidik (2.4)", objective: "Bimbingan kumpulan penyelidik muda secara intensif menerusi bimbingan berstruktur", quarter: "Q3", kpi: "Bilangan Penyelidik Muda Dibimbing secara Mentor-Mentee", target: 100, current: 45, status: "In Progress", category: "RICER", weight: "20% Citations per Faculty", icon: "Users" },
+        { id: 11, program: "EREP - Top Employer Council (3.1)", objective: "Menubuhkan Top Employer Council bersama majlikan korporat (Petronas, TNB, Maybank, dll)", quarter: "Q1", kpi: "Bilangan Majikan Strategik Terlibat dalam Majlis Penasihat", target: 50, current: 20, status: "In Progress", category: "EREP", weight: "15% Employer Reputation", icon: "Landmark" },
+        { id: 12, program: "EREP - Industry Advisory Panel (3.2)", objective: "Memastikan kurikulum akademik disemak dan sejajar dengan kehendak industri semasa", quarter: "Q2", kpi: "Kadar Program Akademik dengan Penasihat Panel Industri (%)", target: 100, current: 95, status: "In Progress", category: "EREP", weight: "15% Employer Reputation", icon: "Landmark" },
+        { id: 13, program: "EREP - Graduate Success Tracker (3.3)", objective: "Mencapai kadar kebolehpasaran graduan yang tinggi 6 bulan selepas tamat pengajian", quarter: "Q3", kpi: "Kadar Kebolehpasaran Graduan UniSZA (%)", target: 85, current: 82, status: "In Progress", category: "EREP", weight: "15% Employer Reputation", icon: "Activity" },
+        { id: 14, program: "EREP - Employer Survey Campaign (3.4)", objective: "Mengumpul maklum balas daripada majikan global dan domestik mengenai kualiti graduan", quarter: "Q4", kpi: "Jumlah Maklum Balas Respon Majikan (Employer Survey)", target: 500, current: 165, status: "In Progress", category: "EREP", weight: "15% Employer Reputation", icon: "Layers" },
+        { id: 15, program: "SIRNI - Membina Jaringan Strategik Antarabangsa (4.1)", objective: "Mewujudkan MoU/MoA yang aktif dengan universiti terkemuka di pelbagai benua", quarter: "Q2", kpi: "Bilangan Perjanjian MoU/MoA Antarabangsa yang Aktif", target: 20, current: 11, status: "In Progress", category: "SIRNI", weight: "10% Int. Research Network", icon: "Globe" },
+        { id: 16, program: "SIRNI - Meningkatkan Penerbitan Bersama (4.3)", objective: "Meningkatkan kualiti dan kuantiti penerbitan penyelidikan bersama pengarang antarabangsa", quarter: "Q3", kpi: "Bilangan Penerbitan Bersama Penulis Antarabangsa (Co-authorship)", target: 200, current: 82, status: "In Progress", category: "SIRNI", weight: "10% Int. Research Network", icon: "BookOpen" },
+        { id: 17, program: "SIRNI - Memperkukuh Geran Penyelidikan Antarabangsa (4.4)", objective: "Mendapatkan pembiayaan antarabangsa berprestij (Horizon Europe, Newton Fund, dll)", quarter: "Q4", kpi: "Jumlah Nilai Geran Penyelidikan Antarabangsa (RM dalam Juta)", target: 10, current: 3.5, status: "In Progress", category: "SIRNI", weight: "10% Int. Research Network", icon: "Landmark" },
+        { id: 18, program: "SP1 - T&L Innovation Champions (ST1)", objective: "Intensive Training for T&L Champion to participate in competitions (UniCeL, AKRI, SULAM, AAN)", quarter: "Q3", kpi: "Number of training programmes conducted", target: 5, current: 2, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Award" },
+        { id: 19, program: "SP1 - Staff Mobility (ST1)", objective: "Attachment of academic staff at local or international conglomerates/industries", quarter: "Q5", kpi: "Percentage of academic staff involved in attachments (%)", target: 15, current: 4, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Users" },
+        { id: 20, program: "SP1 - International Academic Staff (ST1)", objective: "Appointment of prominent international academic staff for knowledge exchange", quarter: "Q6", kpi: "Number of international academic staff appointed", target: 10, current: 2, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Users" },
+        { id: 21, program: "SP1 - International Enrolment (ST1)", objective: "Enrolment of international students in UniSZA academic programmes", quarter: "Q7", kpi: "Number of international student enrollments", target: 150, current: 45, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Globe" },
+        { id: 22, program: "SP1 - MoU/MoA Activities (ST1)", objective: "Active engagements and collaborative activities with international universities", quarter: "Q8", kpi: "Number of active MoU/MoA related activities", target: 25, current: 9, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Landmark" },
+        { id: 23, program: "SP1 - Outbound Mobility (ST1)", objective: "Offering credited outbound mobility programmes for UniSZA students", quarter: "Q9", kpi: "Number of outbound students deployed", target: 50, current: 15, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Globe" },
+        { id: 24, program: "SP1 - Inbound Mobility (ST1)", objective: "Offering credited inbound mobility programmes for international students", quarter: "Q10", kpi: "Number of inbound students received", target: 50, current: 28, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Globe" },
+        { id: 25, program: "SP1 - Adaptive Curriculum Tools (ST1)", objective: "Technology tools infused dynamically in the teaching curriculum", quarter: "Q12", kpi: "Number of technology tools applied in each faculty", target: 8, current: 3, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Activity" },
+        { id: 26, program: "SP1 - Collaborative Teaching (ST1)", objective: "Implementation of collaborative teaching with WoS/Scopus indexed international academics", quarter: "Q15", kpi: "Number of WoS/Scopus-indexed scholars involved in teaching", target: 12, current: 4, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "BookOpen" },
+        { id: 27, program: "SP1 - Premium Academic Programmes (ST1)", objective: "Development and offering of Premium Academic Programmes", quarter: "Q24", kpi: "Number of premium programmes established", target: 3, current: 1, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Award" },
+        { id: 28, program: "SP1 - Veterinary Excellence (ST1)", objective: "Development of Doctor of Veterinary Medicine and embedded AI courses", quarter: "Q25", kpi: "Number of veterinary faculties/programmes developed", target: 1, current: 0, status: "Not Started", category: "SP1", weight: "Future Ready Curriculum", icon: "Activity" },
+        { id: 29, program: "SP1 - Foundation & Social Sciences (ST1)", objective: "Development of new programmes under Foundation & Social Sciences", quarter: "Q26", kpi: "Number of new foundation/social sciences programmes", target: 2, current: 1, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Layers" },
+        { id: 30, program: "SP1 - Academic Funding & Scholarships (ST1)", objective: "Securing funds and sponsorships from academic programmes/scholarships", quarter: "Q27", kpi: "Total scholarship/programme funds secured (RM in Millions)", target: 5, current: 1.2, status: "In Progress", category: "SP1", weight: "Future Ready Curriculum", icon: "Landmark" },
+        { id: 31, program: "SP2 - Industry-Embedded Learning Hub (ST2)", objective: "Partnership with industry in providing/supporting teaching & learning ecosystem", quarter: "Q2", kpi: "Number of facilities/benefits provided by the industry", target: 5, current: 2, status: "In Progress", category: "SP2", weight: "Sustainable Learning", icon: "Landmark" },
+        { id: 32, program: "SP2 - Industry-Embedded Learning Hub (ST2)", objective: "Collaboration with industry in offering Micro-Credentials formally or informally", quarter: "Q3", kpi: "Number of industries involved in developing MC", target: 10, current: 4, status: "In Progress", category: "SP2", weight: "Sustainable Learning", icon: "BookOpen" },
+        { id: 33, program: "SP2 - Digital Platform (ST2)", objective: "Establishing digital platform for access to flexible academic programmes", quarter: "Q4", kpi: "Online platform (Open Learning) established", target: 1, current: 1, status: "Completed", category: "SP2", weight: "Sustainable Learning", icon: "Layers" },
+        { id: 34, program: "SP2 - Lifelong Learning Training (ST2)", objective: "Offering professional certificate training / Business Driven programmes", quarter: "Q5", kpi: "Number of professional certificates offered by each faculty", target: 8, current: 0, status: "Not Started", category: "SP2", weight: "Sustainable Learning", icon: "Award" },
+        { id: 35, program: "SP2 - Green Learning Space (ST2)", objective: "EcoVIBE 2 (Green Learning Space) implementation across campus", quarter: "Q6", kpi: "Number of green learning spaces created", target: 4, current: 1, status: "In Progress", category: "SP2", weight: "Sustainable Learning", icon: "Globe" },
+        { id: 36, program: "SP2 - EduSpark AI Workspace (ST2)", objective: "Dedicated space that integrates AI tools to foster AI literacy in T&L", quarter: "Q8", kpi: "Number of AI learning spaces established", target: 2, current: 0, status: "Not Started", category: "SP2", weight: "Sustainable Learning", icon: "Activity" },
+        { id: 37, program: "SP2 - Virtual XR Learning Space (ST2)", objective: "Setting up of Virtual XR Learning Space for immersive learning", quarter: "Q9", kpi: "Number of Virtual XR Learning Spaces", target: 2, current: 1, status: "In Progress", category: "SP2", weight: "Sustainable Learning", icon: "Layers" },
+        { id: 38, program: "SP2 - Simulation Lab (ST2)", objective: "Transforming traditional classes into hybrid immersive meta classrooms", quarter: "Q11", kpi: "Number of simulation labs set up", target: 2, current: 2, status: "Completed", category: "SP2", weight: "Sustainable Learning", icon: "Layers" },
+        { id: 39, program: "SP2 - Inclusive Digital Education (ST2)", objective: "Developing specialized learning modules for Neurodiversity Disability (SIR SDG)", quarter: "Q13", kpi: "Number of inclusive modules developed", target: 5, current: 3, status: "In Progress", category: "SP2", weight: "Sustainable Learning", icon: "Users" },
+        { id: 40, program: "SP3 - Citra Flexs - Nadwah FlexS", objective: "Citra Flexs student program focused on FlexS leadership integration", quarter: "Q2", kpi: "Number of industries involved in developing Citra FlexS", target: 5, current: 1, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "Users" },
+        { id: 41, program: "SP3 - Digital Platform - FlexS I.N.S.A.N", objective: "Integrasi Nilai & Spiritualiti Mahasiswa online modules on Open Learning", quarter: "Q3", kpi: "FlexS I.N.S.A.N digital platform collaboration established", target: 1, current: 1, status: "Completed", category: "SP3", weight: "Flexible Learning System", icon: "Layers" },
+        { id: 42, program: "SP3 - Lifelong Learning - Daurah FlexS", objective: "Daurah FlexS staff upskilling certificate programs per faculty", quarter: "Q4", kpi: "Number of professional FlexS certificates offered to staff", target: 8, current: 2, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "Award" },
+        { id: 43, program: "SP3 - FlexS Student Icon Award", objective: "Inter-varsity FlexS Student Icon Award Programme to highlight student achievement", quarter: "Q5", kpi: "Number of national-level student icons awarded", target: 3, current: 0, status: "Not Started", category: "SP3", weight: "Flexible Learning System", icon: "Award" },
+        { id: 44, program: "SP3 - FlexS@Global Dialogues", objective: "International dialogues and global educational forums under FlexS@Global", quarter: "Q6", kpi: "Number of international dialogues completed", target: 2, current: 1, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "Globe" },
+        { id: 45, program: "SP3 - International Tahfiz Programme", objective: "Setting up virtual tahfiz learning networks and interactive classrooms", quarter: "Q7", kpi: "Number of virtual international tahfiz spaces", target: 2, current: 1, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "Layers" },
+        { id: 46, program: "SP3 - Global Tahfiz Certificate", objective: "Offering Global Tahfiz Certificate alongside virtual design exhibitions", quarter: "Q8", kpi: "Number of Exceed VR Design Exhibition Spaces", target: 1, current: 0, status: "Not Started", category: "SP3", weight: "Flexible Learning System", icon: "Layers" },
+        { id: 47, program: "SP3 - HiLeap Leadership Mastery", objective: "HiLeap Holistic Leadership and Personal Mastery Programme with classrooms", quarter: "Q9", kpi: "Number of HiLeap leadership modules established", target: 4, current: 2, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "Users" },
+        { id: 48, program: "SP3 - FlexS@Industry Upskilling", objective: "Graduate upskilling courses and micro-credentials for corporate readiness", quarter: "Q10", kpi: "Number of industry-based upskilling labs/courses", target: 4, current: 1, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "Landmark" },
+        { id: 49, program: "SP3 - Turath@FlexS Certificate", objective: "Telaah Turath Series and UniSZA Turath Certificate", quarter: "Q12", kpi: "Number of Turath certification modules designed", target: 6, current: 2, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "BookOpen" },
+        { id: 50, program: "SP3 - FlexS International Outreach", objective: "FlexS International Community Engagement Programme and funding", quarter: "Q13", kpi: "Total outreach funds received (RM in Millions)", target: 3, current: 0.8, status: "In Progress", category: "SP3", weight: "Flexible Learning System", icon: "Globe" }
+      ];
+    }
+    window.onload = function() { fetchInitiatives(); };
+  </script>
+</body>
+</html>
